@@ -1,0 +1,135 @@
+<resources>
+    <string name="app_name">蓝牙串口助手</string>
+    <string name="unknown_device">未知设备</string>
+
+    <!-- 主界面 -->
+    <string name="text_mode_classic">经典蓝牙</string>
+    <string name="paired">已配对</string>
+    <string name="unpaired">未配对</string>
+    <string name="paired_only">仅显示已配对设备</string>
+    <string name="discovering">正在搜索经典蓝牙设备…</string>
+    <string name="discovery_finished">搜索完成</string>
+    <string name="scanning">正在扫描 BLE 设备…</string>
+    <string name="scan_failed">扫描失败（错误码 %1$d）</string>
+    <string name="bt_not_supported">此设备不支持蓝牙</string>
+    <string name="bt_disabled">请先开启蓝牙</string>
+    <string name="ble_not_supported">此设备不支持 BLE 扫描</string>
+    <string name="permission_denied">缺少蓝牙权限，无法使用</string>
+    <string name="connecting_hint">正在连接 %1$s…</string>
+    <string name="connected_hint">已连接 %1$s</string>
+    <string name="disconnected_hint">未连接</string>
+    <string name="bonding">正在配对…</string>
+    <string name="bond_failed">配对失败，请重试</string>
+    <string name="scan">扫描</string>
+    <string name="hint_classic">经典蓝牙：先与 HC-06/HC-05 等模块配对，再点击设备连接</string>
+    <string name="hint_ble">BLE：点击扫描搜索设备，点击连接；可在终端菜单中配置收发特征</string>
+
+    <!-- 首页四宫格 -->
+    <string name="home_subtitle">蓝牙上位机 · 串口助手</string>
+    <string name="card_status">连接状态</string>
+    <string name="card_bluetooth">蓝牙连接</string>
+    <string name="card_bluetooth_sub">选择连接模式\n经典蓝牙 / BLE</string>
+    <string name="card_commands">命令管理中心</string>
+    <string name="card_commands_sub">自定义命令格式\n文本 / HEX</string>
+    <string name="card_settings">设置中心</string>
+    <string name="card_settings_sub">外观背景 / 蓝牙配置</string>
+    <string name="home_connected">已连接 %1$s</string>
+    <string name="home_connecting">正在连接 %1$s…</string>
+
+    <!-- 连接状态页 -->
+    <string name="connection_status">连接状态</string>
+    <string name="no_connection_detail">当前未连接任何设备</string>
+    <string name="go_select_device">选择连接设备</string>
+
+    <!-- 设置中心 -->
+    <string name="settings_center">设置中心</string>
+    <string name="section_appearance">外观</string>
+    <string name="section_bluetooth">蓝牙</string>
+    <string name="section_about">关于</string>
+    <string name="theme_mode">主题模式</string>
+    <string name="follow_system">跟随系统</string>
+    <string name="light_mode">浅色</string>
+    <string name="dark_mode">深色</string>
+    <string name="theme_color">主题颜色</string>
+    <string name="default_line_ending">默认发送换行</string>
+    <string name="default_hex_log">日志默认 HEX 显示</string>
+    <string name="auto_open_terminal">连接成功自动进入终端</string>
+    <string name="version">版本</string>
+
+    <!-- 连接状态卡片 -->
+    <string name="not_connected">未连接</string>
+    <string name="connected">已连接</string>
+    <string name="enter_terminal">进入终端</string>
+    <string name="disconnect_short">断开</string>
+    <string name="cancel_connect">取消连接</string>
+    <string name="paired_devices">已配对设备</string>
+    <string name="nearby_devices">附近设备</string>
+    <string name="scan_results">扫描结果</string>
+    <string name="command_center">命令管理中心</string>
+
+    <!-- 终端界面 -->
+    <string name="status_connected">已连接 · %1$s</string>
+    <string name="status_connecting">正在连接 %1$s…</string>
+    <string name="status_disconnected">已断开</string>
+    <string name="connection_lost">连接已断开</string>
+    <string name="show_hex">HEX 显示</string>
+    <string name="show_ascii">ASCII 显示</string>
+    <string name="clear_log">清空日志</string>
+    <string name="commands">命令管理中心</string>
+    <string name="ble_settings">BLE 设置</string>
+    <string name="disconnect">断开连接</string>
+    <string name="pick_tx">选择发送(TX)特征</string>
+    <string name="pick_rx">选择接收(RX)特征</string>
+    <string name="no_services">尚未发现 GATT 服务</string>
+    <string name="no_characteristics">没有符合条件的特征</string>
+    <string name="hex_invalid">十六进制内容无效</string>
+    <string name="cmd_hex_invalid">命令 [%1$s] 的十六进制内容无效</string>
+    <string name="input_hint">输入命令（文本或 HEX）</string>
+    <string name="send">发送</string>
+    <string name="text_mode">文本</string>
+    <string name="hex_mode">HEX</string>
+
+    <!-- 命令管理 -->
+    <string name="add_command">新增命令</string>
+    <string name="edit_command">编辑命令</string>
+    <string name="delete_command">删除命令</string>
+    <string name="delete_command_msg">确定删除命令 [%1$s] 吗？</string>
+    <string name="save">保存</string>
+    <string name="cancel">取消</string>
+    <string name="delete">删除</string>
+    <string name="name_required">请输入命令名称</string>
+    <string name="content_required">请输入命令内容</string>
+    <string name="command_name">命令名称</string>
+    <string name="command_content">内容（文本或 HEX）</string>
+    <string name="encoding">编码格式</string>
+    <string name="ascii_encoding">ASCII 文本</string>
+    <string name="hex_encoding">HEX 十六进制</string>
+    <string name="append_line_ending">发送时追加换行</string>
+
+    <!-- 滑杆命令 -->
+    <string name="command_type">命令类型</string>
+    <string name="static_command">静态命令</string>
+    <string name="slider_command">滑杆命令</string>
+    <string name="slider_prefix_hint">前缀文本（可选，如 MOVE ）</string>
+    <string name="slider_suffix_hint">后缀文本（可选）</string>
+    <string name="slider_separator">数值分隔符（自由输入）</string>
+    <string name="slider_separator_hint">留空 = 无分隔；可输入空格、逗号、冒号、竖线等任意内容</string>
+    <string name="slider_value_format">数值格式</string>
+    <string name="decimal">十进制</string>
+    <string name="hex_short">十六进制</string>
+    <string name="slider_list">滑杆列表（上限/下限/默认值）</string>
+    <string name="add_slider">添加滑杆</string>
+    <string name="slider_name_hint">名称（如 关节1）</string>
+    <string name="slider_min">最小</string>
+    <string name="slider_max">最大</string>
+    <string name="slider_default">默认</string>
+    <string name="slider_empty">请至少添加一个滑杆</string>
+    <string name="slider_invalid">滑杆参数无效（上限须大于等于下限）</string>
+
+    <!-- 持续发送 -->
+    <string name="auto_send">持续发送</string>
+    <string name="auto_send_running">持续发送中（间隔 %1$d ms）</string>
+    <string name="auto_send_stopped">已停止持续发送</string>
+    <string name="send_interval">发送间隔</string>
+    <string name="drag_to_send">拖动即发送</string>
+</resources>

@@ -1,0 +1,54 @@
+<resources>
+    <style name="Theme.BluetoothAssistant" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/onPrimary</item>
+        <item name="colorPrimaryContainer">@color/primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/onPrimaryContainer</item>
+        <item name="colorSecondary">@color/secondary</item>
+        <item name="colorOnSecondary">@color/onSecondary</item>
+        <item name="colorSecondaryContainer">@color/secondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/onSecondaryContainer</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/onSurface</item>
+        <item name="colorSurfaceVariant">@color/surfaceVariant</item>
+        <item name="colorOnSurfaceVariant">@color/onSurfaceVariant</item>
+        <item name="colorOutline">@color/outline</item>
+    </style>
+
+    <!-- 主题颜色：绿 -->
+    <style name="Theme.BluetoothAssistant.Green">
+        <item name="colorPrimary">#2E7D32</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#A5D6A7</item>
+        <item name="colorOnPrimaryContainer">#002107</item>
+        <item name="colorSecondary">#50614F</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#D2E6CF</item>
+        <item name="colorOnSecondaryContainer">#0E1E0F</item>
+    </style>
+
+    <!-- 主题颜色：紫 -->
+    <style name="Theme.BluetoothAssistant.Purple">
+        <item name="colorPrimary">#6A1B9A</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#E9C7FF</item>
+        <item name="colorOnPrimaryContainer">#250046</item>
+        <item name="colorSecondary">#675D70</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#EEE1F9</item>
+        <item name="colorOnSecondaryContainer">#221A2B</item>
+    </style>
+
+    <!-- 主题颜色：橙 -->
+    <style name="Theme.BluetoothAssistant.Orange">
+        <item name="colorPrimary">#E65100</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#FFDCC7</item>
+        <item name="colorOnPrimaryContainer">#2E0500</item>
+        <item name="colorSecondary">#755847</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#FFDCC7</item>
+        <item name="colorOnSecondaryContainer">#2A170A</item>
+    </style>
+</resources>

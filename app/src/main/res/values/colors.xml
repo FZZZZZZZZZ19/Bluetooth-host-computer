@@ -1,0 +1,32 @@
+<resources>
+    <color name="primary">#1565C0</color>
+    <color name="onPrimary">#FFFFFF</color>
+    <color name="primaryContainer">#D6E3FF</color>
+    <color name="onPrimaryContainer">#001B3F</color>
+    <color name="secondary">#575E71</color>
+    <color name="onSecondary">#FFFFFF</color>
+    <color name="secondaryContainer">#DBE2F9</color>
+    <color name="onSecondaryContainer">#141B2C</color>
+    <color name="background">#F9F9FD</color>
+    <color name="surface">#F9F9FD</color>
+    <color name="onSurface">#191C20</color>
+    <color name="surfaceVariant">#E1E2EC</color>
+    <color name="onSurfaceVariant">#44474F</color>
+    <color name="outline">#74777F</color>
+    <color name="rx_color">#1565C0</color>
+    <color name="tx_color">#E65100</color>
+    <color name="log_background">#F1F1F6</color>
+    <color name="ic_launcher_background">#1565C0</color>
+
+    <!-- 连接状态指示色 -->
+    <color name="state_connected">#2E7D32</color>
+    <color name="state_connecting">#1565C0</color>
+    <color name="state_disconnected">#9E9E9E</color>
+    <color name="state_error">#C62828</color>
+
+    <!-- 主题色色板（设置中心选择） -->
+    <color name="theme_blue">#1565C0</color>
+    <color name="theme_green">#2E7D32</color>
+    <color name="theme_purple">#6A1B9A</color>
+    <color name="theme_orange">#E65100</color>
+</resources>
