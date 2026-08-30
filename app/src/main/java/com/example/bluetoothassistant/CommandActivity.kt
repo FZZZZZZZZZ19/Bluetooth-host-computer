@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.bluetoothassistant.adapter.CommandAdapter
@@ -20,9 +21,11 @@ import com.example.bluetoothassistant.model.SliderCommand
 import com.example.bluetoothassistant.model.SliderDef
 import com.example.bluetoothassistant.model.SliderValueFormat
 import com.example.bluetoothassistant.storage.CommandStore
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
- * 命令管理中心：静态命令（文本/HEX）与滑杆命令（多滑杆组合，可设上下限）
+ * 命令管理中心：静态命令（文本/HEX）与滑杆命令（多滑杆组合，可设上下限），支持导入/导出
  */
 class CommandActivity : BaseActivity() {
 
@@ -30,6 +33,37 @@ class CommandActivity : BaseActivity() {
     private val store by lazy { CommandStore(this) }
     private val commands = mutableListOf<CommandItem>()
     private var nextId = 1L
+
+    /** 导出命令库到文件 */
+    private val exportLauncher =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            uri ?: return@registerForActivityResult
+            runCatching {
+                contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(exportJson().toByteArray(Charsets.UTF_8))
+                }
+                toast(R.string.export_success)
+            }.onFailure { toast(R.string.export_failed) }
+        }
+
+    /** 从文件导入命令库 */
+    private val importLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            uri ?: return@registerForActivityResult
+            val content = runCatching {
+                contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+            }.getOrNull()
+            if (content.isNullOrBlank()) {
+                toast(R.string.import_failed)
+                return@registerForActivityResult
+            }
+            AlertDialog.Builder(this)
+                .setTitle(R.string.import_commands)
+                .setMessage(R.string.import_confirm)
+                .setPositiveButton(R.string.import_commands) { _, _ -> doImport(content) }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        }
 
     private val adapter = CommandAdapter(
         onEdit = { showEditDialog(it) },
@@ -52,11 +86,51 @@ class CommandActivity : BaseActivity() {
     }
 
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
-        if (item.itemId == android.R.id.home) {
-            finish()
-            return true
+        return when (item.itemId) {
+            android.R.id.home -> {
+                finish()
+                true
+            }
+            R.id.action_export -> {
+                exportLauncher.launch("bluetooth_commands.json")
+                true
+            }
+            R.id.action_import -> {
+                importLauncher.launch(arrayOf("application/json"))
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
-        return super.onOptionsItemSelected(item)
+    }
+
+    /** 序列化命令库为 JSON 字符串（含导入导出标识） */
+    private fun exportJson(): String {
+        val arr = JSONArray()
+        commands.forEach { arr.put(it.toJson()) }
+        return JSONObject().apply {
+            put("app", "bluetooth_serial_assistant")
+            put("version", 1)
+            put("commands", arr)
+        }.toString(2)
+    }
+
+    /** 解析并覆盖导入命令库（兼容带包裹对象或裸数组两种格式） */
+    private fun doImport(content: String) {
+        val list = runCatching {
+            val obj = JSONObject(content)
+            val arr = obj.optJSONArray("commands") ?: JSONArray(content)
+            (0 until arr.length()).map { CommandItem.fromJson(arr.getJSONObject(it)) }
+        }.getOrNull()
+        if (list == null) {
+            toast(R.string.import_failed)
+            return
+        }
+        commands.clear()
+        commands.addAll(list)
+        nextId = (commands.maxOfOrNull { it.id } ?: 0L) + 1
+        store.save(commands)
+        adapter.submit(commands)
+        toast(R.string.import_success)
     }
 
     private fun reload() {

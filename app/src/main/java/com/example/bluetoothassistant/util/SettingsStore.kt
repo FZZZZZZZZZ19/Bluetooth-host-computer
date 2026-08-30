@@ -42,6 +42,11 @@ class SettingsStore(context: Context) {
         get() = prefs.getInt(KEY_AUTO_SEND_INTERVAL, 500)
         set(value) = prefs.edit().putInt(KEY_AUTO_SEND_INTERVAL, value).apply()
 
+    /** 终端屏幕常亮（调试/调参时保持屏幕不熄灭） */
+    var keepScreenOn: Boolean
+        get() = prefs.getBoolean(KEY_KEEP_SCREEN_ON, true)
+        set(value) = prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON, value).apply()
+
     companion object {
         private const val KEY_NIGHT_MODE = "night_mode"
         private const val KEY_THEME_COLOR = "theme_color"
@@ -50,5 +55,6 @@ class SettingsStore(context: Context) {
         private const val KEY_AUTO_TERMINAL = "auto_open_terminal"
         private const val KEY_AUTO_SEND = "auto_send_enabled"
         private const val KEY_AUTO_SEND_INTERVAL = "auto_send_interval"
+        private const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
     }
 }

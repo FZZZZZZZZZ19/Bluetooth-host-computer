@@ -22,6 +22,14 @@ import android.os.Looper
 import com.example.bluetoothassistant.model.ConnectionMode
 import com.example.bluetoothassistant.model.ConnectionState
 import com.example.bluetoothassistant.storage.BlePrefs
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 
 /**
@@ -48,6 +56,13 @@ class BleSession(
     private var connected = false
 
     private val handler = Handler(Looper.getMainLooper())
+
+    /** 当前协商的 MTU（默认 23，协商成功后更新），单包数据上限 = MTU - 3 */
+    private var mtu = DEFAULT_MTU
+
+    /** 写入串行化：长命令分包与多次 send 之间互不交错 */
+    private val writeMutex = Mutex()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /** 连接超时看门狗：避免 connectGatt 无回调时界面卡在"正在连接" */
     private val timeoutRunnable = Runnable {
@@ -110,6 +125,12 @@ class BleSession(
                     // 从未连上：把失败原因告诉用户
                     onState(ConnectionState.Error("BLE 连接失败：${gattStatusText(status)}"))
                 }
+            }
+        }
+
+        override fun onMtuChanged(g: BluetoothGatt, mtu: Int, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                this@BleSession.mtu = mtu
             }
         }
 
@@ -251,6 +272,10 @@ class BleSession(
         }
     }
 
+    /**
+     * 发送数据。超过 MTU 的长数据自动按 [mtu-3] 字节分包，
+     * 每包间隔 [WRITE_PACKET_DELAY_MS] 毫秒串行写入（配合互斥锁防止交错）。
+     */
     fun send(bytes: ByteArray) {
         val g = gatt
         val c = tx
@@ -258,6 +283,23 @@ class BleSession(
             onState(ConnectionState.Error(if (g == null) "设备未连接" else "未配置发送特征"))
             return
         }
+        scope.launch {
+            writeMutex.withLock {
+                val maxPayload = (mtu - 3).coerceAtLeast(MIN_PAYLOAD)
+                var offset = 0
+                while (offset < bytes.size) {
+                    val end = minOf(offset + maxPayload, bytes.size)
+                    write(g, c, bytes.copyOfRange(offset, end))
+                    offset = end
+                    if (offset < bytes.size) {
+                        delay(WRITE_PACKET_DELAY_MS)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun write(g: BluetoothGatt, c: BluetoothGattCharacteristic, bytes: ByteArray) {
         val writeType = if (c.properties and PROPERTY_WRITE_NO_RESPONSE != 0) {
             WRITE_TYPE_NO_RESPONSE
         } else {
@@ -275,6 +317,7 @@ class BleSession(
 
     fun disconnect() {
         handler.removeCallbacks(timeoutRunnable)
+        scope.cancel()
         runCatching { gatt?.disconnect() }
         runCatching { gatt?.close() }
         gatt = null
@@ -285,6 +328,9 @@ class BleSession(
 
     companion object {
         private const val CONNECT_TIMEOUT_MS = 15_000L
+        private const val DEFAULT_MTU = 23
+        private const val MIN_PAYLOAD = 20
+        private const val WRITE_PACKET_DELAY_MS = 30L
         private val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
 
         /** 常见 GATT status 的中文提示 */

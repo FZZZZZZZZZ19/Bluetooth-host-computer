@@ -13,6 +13,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            app:menu="@menu/menu_commands"
             app:title="@string/commands" />
 
         <androidx.recyclerview.widget.RecyclerView

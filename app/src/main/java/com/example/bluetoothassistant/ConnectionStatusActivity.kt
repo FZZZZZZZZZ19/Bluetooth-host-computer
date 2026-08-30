@@ -3,6 +3,7 @@ package com.example.bluetoothassistant
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
@@ -42,6 +43,15 @@ class ConnectionStatusActivity : BaseActivity() {
         binding.btnCancelConnect.setOnClickListener { connection.disconnect() }
         binding.btnGoSelect.setOnClickListener {
             startActivity(Intent(this, MainActivity::class.java))
+        }
+        binding.btnReconnect.setOnClickListener {
+            if (!connection.reconnectLast()) {
+                Toast.makeText(
+                    this,
+                    R.string.reconnect_failed,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
 
         lifecycleScope.launch {
@@ -92,5 +102,12 @@ class ConnectionStatusActivity : BaseActivity() {
         binding.btnOpenTerminal.isVisible = connected
         binding.btnDisconnect.isVisible = connected || s is ConnectionState.Error
         binding.btnCancelConnect.isVisible = s is ConnectionState.Connecting
+        // 最近连接卡片：仅未连接且存在历史时显示
+        val last = if (s is ConnectionState.Disconnected) connection.lastConnection() else null
+        binding.recentCard.isVisible = last != null
+        if (last != null) {
+            binding.recentName.text = last.name
+            binding.recentMode.text = last.mode.label
+        }
     }
 }

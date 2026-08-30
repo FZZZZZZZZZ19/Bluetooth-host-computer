@@ -4,14 +4,17 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
 import android.text.Spannable
 import android.text.SpannableString
+import android.text.TextWatcher
 import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -28,6 +31,7 @@ import com.example.bluetoothassistant.model.ConnectionMode
 import com.example.bluetoothassistant.model.ConnectionState
 import com.example.bluetoothassistant.model.LineEnding
 import com.example.bluetoothassistant.model.SliderCommand
+import com.example.bluetoothassistant.model.SliderDef
 import com.example.bluetoothassistant.model.SliderValueFormat
 import com.example.bluetoothassistant.storage.CommandStore
 import com.example.bluetoothassistant.util.SettingsStore
@@ -58,6 +62,25 @@ class TerminalActivity : BaseActivity() {
     /** 持续发送任务与正在循环发送的命令 id */
     private var autoSendJob: Job? = null
     private var autoSendingCommandId: Long? = null
+
+    /** 滑杆循环扫描任务 */
+    private var scanJob: Job? = null
+
+    /** 保存日志到文件（系统文件选择器） */
+    private val saveLogLauncher =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+            uri ?: return@registerForActivityResult
+            runCatching {
+                contentResolver.openOutputStream(uri)?.use { out ->
+                    val sb = StringBuilder()
+                    logEntries.forEach { sb.append(formatEntry(it)).append('\n') }
+                    out.write(sb.toString().toByteArray(Charsets.UTF_8))
+                }
+                Snackbar.make(binding.root, R.string.log_saved, Snackbar.LENGTH_SHORT).show()
+            }.onFailure {
+                Snackbar.make(binding.root, R.string.log_save_failed, Snackbar.LENGTH_SHORT).show()
+            }
+        }
 
     private val logEntries = ArrayDeque<LogEntry>()
     private val logBuilder = StringBuilder()
@@ -97,6 +120,8 @@ class TerminalActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         refreshQuickCommands()
+        // 应用屏幕常亮设置（从设置中心返回时也生效）
+        binding.root.keepScreenOn = settings.keepScreenOn
     }
 
     override fun onPause() {
@@ -149,6 +174,10 @@ class TerminalActivity : BaseActivity() {
             }
             R.id.action_clear_log -> {
                 clearLog()
+                true
+            }
+            R.id.action_save_log -> {
+                saveLogLauncher.launch("bluetooth_log.txt")
                 true
             }
             R.id.action_commands -> {
@@ -376,55 +405,175 @@ class TerminalActivity : BaseActivity() {
         refreshQuickCommands()
     }
 
-    /** 滑杆命令控制面板：拖动滑杆调整各通道数值，实时预览，点击发送组合命令 */
+    /**
+     * 滑杆命令控制面板：
+     * 拖动滑杆或手动输入数值，实时预览；支持拖动即发、复位默认、循环扫描（自动往返发送）。
+     */
     private fun showSliderDialog(item: CommandItem) {
         val cmd = item.slider ?: return
         val db = DialogSliderControlBinding.inflate(layoutInflater)
         val values = IntArray(cmd.sliders.size)
+        val rows = mutableListOf<SliderRow>()
 
         // 拖动即发送：默认跟随全局持续发送设置（本次会话内可单独切换）
         db.swAutoSend.isChecked = settings.autoSendEnabled
+        db.swScan.isChecked = false
+
+        fun refreshPreview() {
+            db.sliderPreview.text = buildSliderPreview(cmd, values)
+        }
 
         cmd.sliders.forEachIndexed { index, def ->
-            val row = ItemSliderControlBinding.inflate(layoutInflater, db.sliderContainer, false)
-            row.sliderName.text = def.name
-            row.sliderSeek.min = def.min
-            row.sliderSeek.max = def.max
             values[index] = def.defaultValue.coerceIn(def.min, def.max)
-            row.sliderSeek.progress = values[index] - def.min
-            row.sliderValue.text = values[index].toString()
-            row.sliderSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                    values[index] = def.min + progress
-                    row.sliderValue.text = values[index].toString()
-                    db.sliderPreview.text = buildSliderPreview(cmd, values)
-                    // 持续控制：每动一次滑杆就立即发送一次
-                    if (fromUser && db.swAutoSend.isChecked) {
-                        sendSliderPayload(cmd, values, item.lineEnding)
+            val rowBinding =
+                ItemSliderControlBinding.inflate(layoutInflater, db.sliderContainer, false)
+            rowBinding.sliderName.text = def.name
+            rowBinding.sliderSeek.min = def.min
+            rowBinding.sliderSeek.max = def.max
+            val holder = SliderRow(index, def, rowBinding)
+            holder.onValueChanged = { v ->
+                values[index] = v
+                refreshPreview()
+                // 持续控制：手动/拖动变化立即发送（扫描模式下由扫描任务负责发送）
+                if (db.swAutoSend.isChecked && !db.swScan.isChecked) {
+                    sendSliderPayload(cmd, values, item.lineEnding)
+                }
+            }
+            holder.update(values[index])
+            rows.add(holder)
+            db.sliderContainer.addView(rowBinding.root)
+        }
+        refreshPreview()
+
+        fun resetValues() {
+            cmd.sliders.forEachIndexed { i, def ->
+                values[i] = def.defaultValue.coerceIn(def.min, def.max)
+            }
+            rows.forEach { it.update(values[it.index]) }
+            refreshPreview()
+        }
+
+        fun stopScan() {
+            scanJob?.cancel()
+            scanJob = null
+        }
+
+        fun applyScanStep(step: Int) {
+            rows.forEach { row ->
+                val v = (row.def.min + (row.def.max - row.def.min) * step / 100)
+                    .coerceIn(row.def.min, row.def.max)
+                values[row.index] = v
+                row.update(v)
+            }
+            refreshPreview()
+            sendSliderPayload(cmd, values, item.lineEnding)
+        }
+
+        fun startScan() {
+            stopScan()
+            scanJob = lifecycleScope.launch {
+                while (isActive) {
+                    for (step in 0..100) {
+                        if (!isActive) break
+                        applyScanStep(step)
+                        delay(SCAN_STEP_DELAY_MS)
+                    }
+                    for (step in 100 downTo 0) {
+                        if (!isActive) break
+                        applyScanStep(step)
+                        delay(SCAN_STEP_DELAY_MS)
                     }
                 }
-
-                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
-            })
-            db.sliderContainer.addView(row.root)
+            }
         }
-        db.sliderPreview.text = buildSliderPreview(cmd, values)
+
+        db.swScan.setOnCheckedChangeListener { _, checked ->
+            if (checked) startScan() else stopScan()
+        }
 
         val dialog = AlertDialog.Builder(this)
             .setTitle(item.name)
             .setView(db.root)
+            .setNeutralButton(R.string.reset_default, null)
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.send, null)
             .create()
 
         dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                resetValues()
+            }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                stopScan()
                 sendSliderPayload(cmd, values, item.lineEnding)
                 dialog.dismiss()
             }
         }
+        dialog.setOnDismissListener { stopScan() }
         dialog.show()
+    }
+
+    /** 单个滑杆的控制行：SeekBar 与数值输入框双向同步（带防重入） */
+    private inner class SliderRow(
+        val index: Int,
+        val def: SliderDef,
+        val binding: ItemSliderControlBinding
+    ) {
+        private var updating = false
+
+        /** 值变化回调（用户拖动或输入触发） */
+        var onValueChanged: (Int) -> Unit = {}
+
+        init {
+            binding.sliderSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    if (updating) return
+                    updating = true
+                    onValueChanged(def.min + progress)
+                    binding.sliderValueInput.setText((def.min + progress).toString())
+                    binding.sliderValueInput.setSelection(binding.sliderValueInput.text?.length ?: 0)
+                    updating = false
+                }
+
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            })
+
+            binding.sliderValueInput.addTextChangedListener(object : TextWatcher {
+                override fun afterTextChanged(s: Editable?) {
+                    if (updating) return
+                    updating = true
+                    val raw = s?.toString()?.trim().orEmpty()
+                    if (raw.isNotEmpty()) {
+                        val input = raw.toIntOrNull()
+                        if (input != null) {
+                            val clamped = input.coerceIn(def.min, def.max)
+                            onValueChanged(clamped)
+                            binding.sliderSeek.progress = clamped - def.min
+                            if (clamped != input) {
+                                binding.sliderValueInput.setText(clamped.toString())
+                                binding.sliderValueInput.setSelection(
+                                    binding.sliderValueInput.text?.length ?: 0
+                                )
+                            }
+                        }
+                    }
+                    updating = false
+                }
+
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            })
+        }
+
+        /** 程序化更新（初始化/复位/扫描），不触发回调 */
+        fun update(v: Int) {
+            updating = true
+            binding.sliderSeek.progress = v - def.min
+            binding.sliderValueInput.setText(v.toString())
+            binding.sliderValueInput.setSelection(binding.sliderValueInput.text?.length ?: 0)
+            updating = false
+        }
     }
 
     /** 发送一次滑杆组合命令并记录 TX 日志 */
@@ -550,5 +699,6 @@ class TerminalActivity : BaseActivity() {
         const val EXTRA_DEVICE_NAME = "device_name"
         private const val MAX_LOG_ENTRIES = 500
         private const val MAX_LOG_CHARS = 200_000
+        private const val SCAN_STEP_DELAY_MS = 40L
     }
 }

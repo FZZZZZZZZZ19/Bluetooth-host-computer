@@ -132,4 +132,24 @@
     <string name="auto_send_stopped">已停止持续发送</string>
     <string name="send_interval">发送间隔</string>
     <string name="drag_to_send">拖动即发送</string>
+
+    <!-- v1.1：屏幕常亮 / 日志保存 / 滑杆增强 / 导入导出 / 最近连接 -->
+    <string name="keep_screen_on">终端屏幕常亮</string>
+    <string name="save_log">保存日志</string>
+    <string name="log_saved">日志已保存</string>
+    <string name="log_save_failed">日志保存失败</string>
+    <string name="reset_default">复位默认</string>
+    <string name="scan_mode">循环扫描</string>
+    <string name="scan_mode_hint">自动从下限扫到上限再返回，持续发送</string>
+    <string name="slider_value_hint">数值</string>
+    <string name="export_commands">导出命令</string>
+    <string name="import_commands">导入命令</string>
+    <string name="export_success">命令已导出</string>
+    <string name="export_failed">导出失败</string>
+    <string name="import_success">命令导入成功</string>
+    <string name="import_failed">导入失败：文件格式不正确</string>
+    <string name="import_confirm">导入将覆盖当前命令库，确定继续吗？</string>
+    <string name="recent_connection">最近连接</string>
+    <string name="reconnect">一键重连</string>
+    <string name="reconnect_failed">重连失败：设备不可用，请重新选择</string>
 </resources>

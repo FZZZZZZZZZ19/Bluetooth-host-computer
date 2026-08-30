@@ -20,10 +20,14 @@
             android:maxLines="1"
             android:textSize="14sp" />
 
-        <TextView
-            android:id="@+id/sliderValue"
-            android:layout_width="wrap_content"
+        <EditText
+            android:id="@+id/sliderValueInput"
+            android:layout_width="72dp"
             android:layout_height="wrap_content"
+            android:gravity="center|end"
+            android:hint="@string/slider_value_hint"
+            android:inputType="numberSigned"
+            android:maxLines="1"
             android:textSize="14sp"
             android:textStyle="bold" />
     </LinearLayout>

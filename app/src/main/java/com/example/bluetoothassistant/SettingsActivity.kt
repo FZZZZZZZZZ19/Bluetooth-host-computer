@@ -119,6 +119,10 @@ class SettingsActivity : BaseActivity() {
         binding.swAutoSend.setOnCheckedChangeListener { _, checked ->
             store.autoSendEnabled = checked
         }
+        binding.swKeepScreen.isChecked = store.keepScreenOn
+        binding.swKeepScreen.setOnCheckedChangeListener { _, checked ->
+            store.keepScreenOn = checked
+        }
         // 发送间隔
         val intervals = listOf(100, 200, 500, 1000, 2000)
         val intervalAdapter = ArrayAdapter(

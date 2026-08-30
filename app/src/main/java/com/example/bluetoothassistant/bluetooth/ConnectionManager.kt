@@ -33,6 +33,50 @@ class ConnectionManager(private val context: Context) {
     var connectedAddress: String? = null
         private set
 
+    private val historyPrefs =
+        context.getSharedPreferences("connection_history", Context.MODE_PRIVATE)
+
+    /** 最近一次成功连接的设备 */
+    data class LastConnection(
+        val mode: ConnectionMode,
+        val address: String,
+        val name: String
+    )
+
+    fun lastConnection(): LastConnection? {
+        val address = historyPrefs.getString(KEY_LAST_ADDRESS, null) ?: return null
+        val mode = runCatching {
+            ConnectionMode.valueOf(
+                historyPrefs.getString(KEY_LAST_MODE, ConnectionMode.CLASSIC.name)
+                    ?: ConnectionMode.CLASSIC.name
+            )
+        }.getOrDefault(ConnectionMode.CLASSIC)
+        return LastConnection(
+            mode = mode,
+            address = address,
+            name = historyPrefs.getString(KEY_LAST_NAME, address) ?: address
+        )
+    }
+
+    /** 一键重连最近连接的设备；无历史或设备不可用时返回 false */
+    fun reconnectLast(): Boolean {
+        val last = lastConnection() ?: return false
+        val manager =
+            context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager ?: return false
+        val device = runCatching { manager.adapter.getRemoteDevice(last.address) }.getOrNull()
+            ?: return false
+        if (last.mode == ConnectionMode.BLE) connectBle(device) else connectClassic(device)
+        return true
+    }
+
+    private fun saveLastConnection(mode: ConnectionMode, address: String, name: String) {
+        historyPrefs.edit()
+            .putString(KEY_LAST_MODE, mode.name)
+            .putString(KEY_LAST_ADDRESS, address)
+            .putString(KEY_LAST_NAME, name)
+            .apply()
+    }
+
     val mode: ConnectionMode
         get() = if (ble != null) ConnectionMode.BLE else ConnectionMode.CLASSIC
 
@@ -47,7 +91,16 @@ class ConnectionManager(private val context: Context) {
         session = ClassicSession(
             device = device,
             onData = { data -> _incoming.tryEmit(data) },
-            onState = { s -> if (classic === session) _state.value = s }
+            onState = { s ->
+                if (s is ConnectionState.Connected) {
+                    saveLastConnection(
+                        ConnectionMode.CLASSIC,
+                        device.address,
+                        device.name ?: device.address
+                    )
+                }
+                if (classic === session) _state.value = s
+            }
         )
         classic = session
         session?.start()
@@ -62,7 +115,16 @@ class ConnectionManager(private val context: Context) {
             context = context,
             device = device,
             onData = { data -> _incoming.tryEmit(data) },
-            onState = { s -> if (ble === session) _state.value = s }
+            onState = { s ->
+                if (s is ConnectionState.Connected) {
+                    saveLastConnection(
+                        ConnectionMode.BLE,
+                        device.address,
+                        device.name ?: device.address
+                    )
+                }
+                if (ble === session) _state.value = s
+            }
         )
         ble = session
         session?.start()
@@ -115,5 +177,11 @@ class ConnectionManager(private val context: Context) {
         if (_state.value != ConnectionState.Disconnected) {
             _state.value = ConnectionState.Disconnected
         }
+    }
+
+    companion object {
+        private const val KEY_LAST_MODE = "last_mode"
+        private const val KEY_LAST_ADDRESS = "last_address"
+        private const val KEY_LAST_NAME = "last_name"
     }
 }
