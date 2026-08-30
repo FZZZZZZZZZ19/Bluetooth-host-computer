@@ -15,7 +15,10 @@ enum class CommandType {
     STATIC,
 
     /** 滑杆命令：多个数字滑杆组合（如机械臂多关节角度） */
-    SLIDER
+    SLIDER,
+
+    /** 组合命令（数组）：多个静态片段按顺序拼接，带前缀/后缀，一次发送 */
+    SEQUENCE
 }
 
 /** 滑杆数值格式 */
@@ -102,6 +105,69 @@ data class SliderCommand(
     }
 }
 
+/** 组合命令的单个静态片段 */
+data class SequenceItem(
+    val content: String,
+    val encoding: CommandEncoding
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("content", content)
+        put("encoding", encoding.name)
+    }
+
+    companion object {
+        fun fromJson(o: JSONObject): SequenceItem = SequenceItem(
+            content = o.optString("content", ""),
+            encoding = runCatching { CommandEncoding.valueOf(o.optString("encoding", "ASCII")) }
+                .getOrDefault(CommandEncoding.ASCII)
+        )
+    }
+}
+
+/**
+ * 组合命令（数组）：
+ * 发送字节 = encode(prefix) + encode(item0) + [separator] + encode(item1) + … + encode(suffix)
+ * 每段可独立选择文本或 HEX 编码（如 HEX 帧头 + ASCII 数据 + HEX 校验帧尾）。
+ */
+data class SequenceCommand(
+    val prefix: String,
+    val prefixEncoding: CommandEncoding,
+    val separator: String,
+    val items: List<SequenceItem>,
+    val suffix: String,
+    val suffixEncoding: CommandEncoding
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("prefix", prefix)
+        put("prefixEncoding", prefixEncoding.name)
+        put("separator", separator)
+        put("suffix", suffix)
+        put("suffixEncoding", suffixEncoding.name)
+        val arr = JSONArray()
+        items.forEach { arr.put(it.toJson()) }
+        put("items", arr)
+    }
+
+    companion object {
+        fun fromJson(o: JSONObject): SequenceCommand {
+            val arr = o.optJSONArray("items") ?: JSONArray()
+            val items = (0 until arr.length()).map { SequenceItem.fromJson(arr.getJSONObject(it)) }
+            return SequenceCommand(
+                prefix = o.optString("prefix", ""),
+                prefixEncoding = runCatching {
+                    CommandEncoding.valueOf(o.optString("prefixEncoding", "ASCII"))
+                }.getOrDefault(CommandEncoding.ASCII),
+                separator = o.optString("separator", ""),
+                items = items,
+                suffix = o.optString("suffix", ""),
+                suffixEncoding = runCatching {
+                    CommandEncoding.valueOf(o.optString("suffixEncoding", "ASCII"))
+                }.getOrDefault(CommandEncoding.ASCII)
+            )
+        }
+    }
+}
+
 /** 用户自定义命令 */
 data class CommandItem(
     val id: Long,
@@ -110,7 +176,8 @@ data class CommandItem(
     val encoding: CommandEncoding,
     val lineEnding: LineEnding,
     val type: CommandType = CommandType.STATIC,
-    val slider: SliderCommand? = null
+    val slider: SliderCommand? = null,
+    val sequence: SequenceCommand? = null
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -120,6 +187,7 @@ data class CommandItem(
         put("lineEnding", lineEnding.name)
         put("type", type.name)
         slider?.let { put("slider", it.toJson()) }
+        sequence?.let { put("sequence", it.toJson()) }
     }
 
     companion object {
@@ -135,7 +203,8 @@ data class CommandItem(
                 lineEnding = runCatching { LineEnding.valueOf(json.optString("lineEnding", "NONE")) }
                     .getOrDefault(LineEnding.NONE),
                 type = type,
-                slider = json.optJSONObject("slider")?.let { SliderCommand.fromJson(it) }
+                slider = json.optJSONObject("slider")?.let { SliderCommand.fromJson(it) },
+                sequence = json.optJSONObject("sequence")?.let { SequenceCommand.fromJson(it) }
             )
         }
     }

@@ -110,6 +110,14 @@
     <string name="command_type">命令类型</string>
     <string name="static_command">静态命令</string>
     <string name="slider_command">滑杆命令</string>
+    <string name="sequence_command">组合命令</string>
+    <string name="sequence_prefix_hint">前缀文本或HEX（可选）</string>
+    <string name="sequence_suffix_hint">后缀文本或HEX（可选）</string>
+    <string name="sequence_separator_hint">片段间分隔符（留空=无；可输入逗号、空格等）</string>
+    <string name="sequence_list">片段列表（按顺序拼接发送）</string>
+    <string name="add_sequence">添加片段</string>
+    <string name="sequence_invalid">片段无效（内容为空或 HEX 格式错误）</string>
+    <string name="sequence_empty">请至少添加一个片段</string>
     <string name="slider_prefix_hint">前缀文本（可选，如 MOVE ）</string>
     <string name="slider_suffix_hint">后缀文本（可选）</string>
     <string name="slider_separator">数值分隔符（自由输入）</string>

@@ -30,6 +30,7 @@ import com.example.bluetoothassistant.model.CommandType
 import com.example.bluetoothassistant.model.ConnectionMode
 import com.example.bluetoothassistant.model.ConnectionState
 import com.example.bluetoothassistant.model.LineEnding
+import com.example.bluetoothassistant.model.SequenceCommand
 import com.example.bluetoothassistant.model.SliderCommand
 import com.example.bluetoothassistant.model.SliderDef
 import com.example.bluetoothassistant.model.SliderValueFormat
@@ -358,9 +359,18 @@ class TerminalActivity : BaseActivity() {
         sendStaticCommand(item)
     }
 
-    /** 单次发送静态命令 */
+    /** 单次发送静态型命令（静态命令 / 组合命令），失败返回 false 且不追加日志 */
     private fun sendStaticCommand(item: CommandItem) {
-        val payload: ByteArray = when (item.encoding) {
+        val payload = buildStaticPayload(item) ?: return
+        val full = payload + item.lineEnding.bytes
+        if (connection.send(full)) {
+            appendLog(false, full)
+        }
+    }
+
+    /** 组装静态型命令的负载字节（静态命令 / 组合命令）；非法时提示并返回 null */
+    private fun buildStaticPayload(item: CommandItem): ByteArray? = when (item.type) {
+        CommandType.STATIC -> when (item.encoding) {
             CommandEncoding.ASCII -> item.content.toByteArray(Charsets.UTF_8)
             CommandEncoding.HEX -> try {
                 HexUtils.hexToBytes(item.content)
@@ -370,14 +380,38 @@ class TerminalActivity : BaseActivity() {
                     getString(R.string.cmd_hex_invalid, item.name),
                     Toast.LENGTH_SHORT
                 ).show()
-                return
+                null
             }
         }
-        val full = payload + item.lineEnding.bytes
-        if (connection.send(full)) {
-            appendLog(false, full)
-        }
+        CommandType.SEQUENCE -> buildSequencePayload(item.sequence)
+        else -> null
     }
+
+    /** 组装组合命令：encode(prefix) + 片段0 + [separator] + 片段1 + … + encode(suffix) */
+    private fun buildSequencePayload(seq: SequenceCommand?): ByteArray? {
+        if (seq == null) return null
+        val out = java.io.ByteArrayOutputStream()
+        try {
+            out.write(encodeSegment(seq.prefix, seq.prefixEncoding))
+            val sep = seq.separator.toByteArray(Charsets.UTF_8)
+            seq.items.forEachIndexed { i, item ->
+                if (i > 0) out.write(sep)
+                out.write(encodeSegment(item.content, item.encoding))
+            }
+            out.write(encodeSegment(seq.suffix, seq.suffixEncoding))
+        } catch (e: IllegalArgumentException) {
+            Toast.makeText(this, R.string.hex_invalid, Toast.LENGTH_SHORT).show()
+            return null
+        }
+        return out.toByteArray()
+    }
+
+    private fun encodeSegment(content: String, encoding: CommandEncoding): ByteArray =
+        if (encoding == CommandEncoding.HEX) {
+            HexUtils.hexToBytes(content)
+        } else {
+            content.toByteArray(Charsets.UTF_8)
+        }
 
     /** 切换静态命令的持续发送：开始 / 停止 */
     private fun toggleAutoSendStatic(item: CommandItem) {

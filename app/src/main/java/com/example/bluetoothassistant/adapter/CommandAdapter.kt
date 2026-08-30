@@ -35,11 +35,18 @@ class CommandAdapter(
                 val preview = buildSliderPreview(item)
                 if (preview.isBlank()) "滑杆 × $n" else "$preview ｜ 滑杆 × $n"
             }
+            CommandType.SEQUENCE -> {
+                val n = item.sequence?.items?.size ?: 0
+                val preview = buildSequencePreview(item)
+                if (preview.isBlank()) "组合 × $n" else "$preview ｜ 组合 × $n"
+            }
         }
         holder.binding.cmdMeta.text = when (item.type) {
             CommandType.STATIC -> "${item.encoding.name} · 追加 ${item.lineEnding.label}"
             CommandType.SLIDER ->
                 "滑杆组合 · ${item.slider?.sliders?.size ?: 0} 个 · 追加 ${item.lineEnding.label}"
+            CommandType.SEQUENCE ->
+                "组合数组 · ${item.sequence?.items?.size ?: 0} 段 · 追加 ${item.lineEnding.label}"
         }
         holder.binding.root.setOnClickListener { onEdit(item) }
         holder.binding.btnDelete.setOnClickListener { onDelete(item) }
@@ -53,6 +60,17 @@ class CommandAdapter(
             sb.append(def.defaultValue)
         }
         sb.append(cmd.suffix)
+        return sb.toString()
+    }
+
+    private fun buildSequencePreview(item: CommandItem): String {
+        val seq = item.sequence ?: return ""
+        val sb = StringBuilder(seq.prefix)
+        seq.items.forEachIndexed { i, it ->
+            if (i > 0) sb.append(seq.separator)
+            sb.append(it.content)
+        }
+        sb.append(seq.suffix)
         return sb.toString()
     }
 
