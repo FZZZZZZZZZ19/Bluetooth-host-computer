@@ -28,7 +28,7 @@
 
 ## 构建 APK
 
-> 📦 **仓库内已附带可直接安装的 APK**：`apk/BluetoothSerialAssistant-v1.0-debug.apk`（Debug 签名，直接安装到手机即可使用）
+> 📦 **直接下载安装**：[GitHub Releases v1.0](https://github.com/FZZZZZZZZZ19/Bluetooth-host-computer/releases/tag/v1.0)（`BluetoothSerialAssistant-v1.0-debug.apk`，Debug 签名，手机下载后直接安装）
 
 ### 方式一：Android Studio（推荐）
 
