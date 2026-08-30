@@ -28,6 +28,8 @@
 
 ## 构建 APK
 
+> 📦 **仓库内已附带可直接安装的 APK**：`apk/BluetoothSerialAssistant-v1.0-debug.apk`（Debug 签名，直接安装到手机即可使用）
+
 ### 方式一：Android Studio（推荐）
 
 1. `File → Open` 选择项目根目录 `BluetoothSerialAssistant`
